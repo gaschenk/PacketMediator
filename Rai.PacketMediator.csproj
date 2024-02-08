@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageVersion>$(PackageVersion)</PackageVersion>
+    <PackageProjectUrl>https://forge.rainote.dev/rainote/PacketMediator</PackageProjectUrl>
+    <PackageLicenseUrl>https://forge.rainote.dev/rainote/PacketMediator/src/branch/main/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://forge.rainote.dev/rainote/PacketMediator</RepositoryUrl>
+    <RepositoryType>GIT</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
