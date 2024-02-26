@@ -6,8 +6,19 @@
   "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security"]
+    "labels": [
+      "Kind: Security"
+    ]
   },
-  "extends": [":gitSignOff",":labels(dependencies)", "docker:disable"],
-  "baseBranches": ["main", "/^release\\/.*/"]
+  "labels": [
+    "Kind: Dependency"
+  ],
+  "extends": [
+    ":gitSignOff",
+    "docker:disable"
+  ],
+  "baseBranches": [
+    "main",
+    "/^release\\/.*/"
+  ]
 }
