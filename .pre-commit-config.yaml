@@ -1,19 +1,19 @@
 repos:
-- repo: local
-  hooks:
+  - repo: local
+    hooks:
       #Use dotnet format already installed on your machine
-  - id: dotnet-format
-    name: dotnet-format
-    language: system
-    entry: dotnet format --include
-    types_or: [c#, vb]
-- repo: https://github.com/Mateusz-Grzelinski/actionlint-py
-  rev: v1.6.26.11
-  hooks:
-  - id: actionlint
-    additional_dependencies: [pyflakes>=3.0.1, shellcheck-py>=0.9.0.5]
-- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.12.0
-  hooks:
-  - id: pretty-format-yaml
-    args: [--autofix, --indent, '2']
+      - id: dotnet-format
+        name: dotnet-format
+        language: system
+        entry: dotnet format --include
+        types_or: [ c#, vb ]
+  - repo: https://github.com/Mateusz-Grzelinski/actionlint-py
+    rev: v1.6.26.11
+    hooks:
+      - id: actionlint
+        additional_dependencies: [ pyflakes>=3.0.1, shellcheck-py>=0.9.0.5 ]
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.12.0
+    hooks:
+      - id: pretty-format-yaml
+        args: [ --autofix, --indent, '2' ]
