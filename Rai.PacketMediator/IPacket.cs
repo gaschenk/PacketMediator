@@ -1,4 +1,4 @@
-// Licensed to Timothy Schenk under the GNU AGPL Version 3 License.
+// Licensed to Timothy Schenk under the Apache 2.0 License.
 
 namespace Rai.PacketMediator;
 
