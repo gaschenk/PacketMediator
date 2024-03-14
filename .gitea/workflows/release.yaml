@@ -77,7 +77,7 @@ jobs:
       - name: Export licenses
         run: dotnet-project-licenses -i . -u --projects-filter projects_ignore_licenses.json -m -j -e -f licenses
       - name: Upload licenses
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: licenses
           path: licenses
