@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <PackageVersion>$(PackageVersion)</PackageVersion>
     <PackageProjectUrl>https://forge.rainote.dev/rainote/PacketMediator</PackageProjectUrl>
-    <PackageLicenseUrl>https://forge.rainote.dev/rainote/PacketMediator/src/branch/main/LICENSE</PackageLicenseUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://forge.rainote.dev/rainote/PacketMediator</RepositoryUrl>
     <RepositoryType>GIT</RepositoryType>
     <Version>$(PackageVersion)</Version>
@@ -17,9 +17,13 @@
     <Title>Packet Mediator</Title>
     <Description>A mediator specifically for packet handling when dispatching to respective packet handlers.</Description>
     <Product>RaiNote.PacketMediator</Product>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="\"/>
     <PackageReference Include="DotNext" Version="5.3.1"/>
     <PackageReference Include="DotNext.Metaprogramming" Version="5.3.0"/>
     <PackageReference Include="JetBrains.Annotations" Version="2023.3.0"/>
