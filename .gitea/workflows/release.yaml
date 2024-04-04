@@ -58,7 +58,6 @@ jobs:
         run: |
           cd RaiNote.PacketMediator
           dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://forge.rainote.dev/api/packages/rainote/nuget/index.json
-          dotnet nuget push "*.snupkg" --api-key ${{secrets.nuget_api_key}} --source https://forge.rainote.dev/api/packages/rainote/nuget/index.json
 
   generate-licences:
     needs: [ build, preprocess ]
