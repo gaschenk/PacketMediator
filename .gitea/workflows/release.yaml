@@ -29,6 +29,7 @@ jobs:
         run: dotnet restore
       - name: Build
         run: |
+          cd RaiNote.PacketMediator
           dotnet build RaiNote.PacketMediator.csproj -c Release
 
   publish:
@@ -48,12 +49,14 @@ jobs:
           echo "Extracted version is $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         shell: bash
-      - name: Pack nugets
+      - name: Pack nuget package
         run: |
+          cd RaiNote.PacketMediator
           dotnet build RaiNote.PacketMediator.csproj -c Release -p:PackageVersion=${{env.VERSION}}
           dotnet pack -c Release -p:PackageVersion=${{env.VERSION}} --output .
       - name: Push to NuGet
         run: |
+          cd RaiNote.PacketMediator
           dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://forge.rainote.dev/api/packages/rainote/nuget/index.json
 
   generate-licences:
