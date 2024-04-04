@@ -1,6 +1,6 @@
 // Licensed to Timothy Schenk under the Apache 2.0 License.
 
-namespace Rai.PacketMediator;
+namespace RaiNote.PacketMediator;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public abstract class PacketIdAttribute<TPacketIdEnum> : Attribute where TPacketIdEnum : Enum

@@ -2,7 +2,7 @@
 
 using JetBrains.Annotations;
 
-namespace Rai.PacketMediator;
+namespace RaiNote.PacketMediator;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public interface IBidirectionalPacket : IOutgoingPacket, IIncomingPacket;

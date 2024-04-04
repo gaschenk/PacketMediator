@@ -3,7 +3,7 @@
 using System.Diagnostics;
 using JetBrains.Annotations;
 
-namespace Rai.PacketMediator;
+namespace RaiNote.PacketMediator;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public interface IPacketHandler<in TIncomingPacket, in TSession> : IPacketHandler<TSession>

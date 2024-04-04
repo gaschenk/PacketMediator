@@ -10,6 +10,13 @@
     <RepositoryUrl>https://forge.rainote.dev/rainote/PacketMediator</RepositoryUrl>
     <RepositoryType>GIT</RepositoryType>
     <Version>$(PackageVersion)</Version>
+    <Authors>Timothy (RaiNote) Schenk</Authors>
+    <AssemblyName>RaiNote.PacketMediator</AssemblyName>
+    <RootNamespace>RaiNote.PacketMediator</RootNamespace>
+    <PackageId>RaiNote.PacketMediator</PackageId>
+    <Title>Packet Mediator</Title>
+    <Description>A mediator specifically for packet handling when dispatching to respective packet handlers.</Description>
+    <Product>RaiNote.PacketMediator</Product>
   </PropertyGroup>
 
   <ItemGroup>

@@ -9,7 +9,7 @@ using DotNext.Linq.Expressions;
 using DotNext.Metaprogramming;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Rai.PacketMediator;
+namespace RaiNote.PacketMediator;
 
 public class PacketDistributor<TPacketIdEnum, TSession> where TPacketIdEnum : Enum
 {

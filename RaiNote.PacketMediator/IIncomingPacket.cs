@@ -2,11 +2,11 @@
 
 using JetBrains.Annotations;
 
-namespace Rai.PacketMediator;
+namespace RaiNote.PacketMediator;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-public interface IOutgoingPacket : IPacket
+public interface IIncomingPacket : IPacket
 {
     [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-    public byte[] Serialize();
+    public void Deserialize(byte[] data);
 }

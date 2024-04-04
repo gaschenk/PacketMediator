@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Rai.PacketMediator\Rai.PacketMediator.csproj" />
+      <ProjectReference Include="..\RaiNote.PacketMediator\RaiNote.PacketMediator.csproj" />
     </ItemGroup>
 
 </Project>

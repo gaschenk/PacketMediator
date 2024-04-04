@@ -3,7 +3,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Hosting;
 
-namespace Rai.PacketMediator;
+namespace RaiNote.PacketMediator;
 
 public class PacketDistributorService<TPacketIdEnum, TSession> : IHostedService
     where TPacketIdEnum : Enum
