@@ -62,7 +62,7 @@ jobs:
   generate-licences:
     needs: [ build, preprocess ]
     runs-on: ubuntu-latest
-    container: catthehacker/ubuntu:act-latest@sha256:efe7d859ca6f98a21b3b0471ab48455af597a064d719f65332d0f105aadcad65
+    container: catthehacker/ubuntu:act-latest@sha256:ee8404ebef08b77dc1523ea070aab3fef428459753d2da0246c1334ccc577e50
     steps:
       - uses: actions/checkout@v4
       - name: Setup dotnet
