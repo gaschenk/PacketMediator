@@ -13,13 +13,15 @@ public class PacketDistributorService<TPacketIdEnum, TSession> : IHostedService
     public PacketDistributorService(IServiceProvider serviceProvider,
         IEnumerable<Assembly> sourcesContainingPackets, IEnumerable<Assembly> sourcesContainingPacketHandlers)
     {
-        _packetDistributor = new PacketDistributor<TPacketIdEnum, TSession>(serviceProvider, sourcesContainingPackets,
-            sourcesContainingPacketHandlers);
+        _packetDistributor = new PacketDistributor<TPacketIdEnum, TSession>(serviceProvider,
+            sourcesContainingPackets,
+            sourcesContainingPacketHandlers
+        );
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        return _packetDistributor.DequeuePacketAsync(cancellationToken);
+        await _packetDistributor.DequeuePacketAsync(cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -32,15 +34,10 @@ public class PacketDistributorService<TPacketIdEnum, TSession> : IHostedService
         return _packetDistributor.AddPacketAsync(packetData, operationCode, session);
     }
 
-    public TPacketIdEnum GetOperationCodeByPacketType(IPacket packet)
+    public DotNext.Optional<TPacketIdEnum> GetOperationCodeByPacketType(IPacket packet)
     {
         var type = packet.GetType();
         _packetDistributor.PacketIdMap.TryGetValue(type, out var value);
-        if (value is null)
-        {
-            throw new ArgumentOutOfRangeException(type.Name);
-        }
-
-        return value;
+        return value ?? DotNext.Optional<TPacketIdEnum>.None;
     }
 }
