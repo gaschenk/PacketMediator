@@ -23,12 +23,14 @@ public class PacketDistributor<TPacketIdEnum, TSession> where TPacketIdEnum : En
     public PacketDistributor(IServiceProvider serviceProvider,
         IEnumerable<Assembly> sourcesContainingPackets, IEnumerable<Assembly> sourcesContainingPacketHandlers)
     {
-        _channel = Channel.CreateUnbounded<ValueTuple<byte[], TPacketIdEnum, TSession>>(new UnboundedChannelOptions
-        {
-            AllowSynchronousContinuations = false,
-            SingleReader = false,
-            SingleWriter = false
-        });
+        _channel = Channel.CreateUnbounded<ValueTuple<byte[], TPacketIdEnum, TSession>>(
+            new UnboundedChannelOptions
+            {
+                AllowSynchronousContinuations = false,
+                SingleReader = false,
+                SingleWriter = false
+            }
+        );
         var containingPackets = sourcesContainingPackets as Assembly[] ?? sourcesContainingPackets.ToArray();
         var allIncomingPackets = GetAllPackets(containingPackets, typeof(IIncomingPacket));
         var allOutgoingPackets = GetAllPackets(containingPackets, typeof(IOutgoingPacket));
@@ -42,27 +44,32 @@ public class PacketDistributor<TPacketIdEnum, TSession> where TPacketIdEnum : En
             new ConcurrentDictionary<TPacketIdEnum, Func<byte[], IIncomingPacket>>();
         _packetHandlersInstantiation = new ConcurrentDictionary<TPacketIdEnum, IPacketHandler<TSession>?>();
         packetHandlers.ForEach(packetHandlerPair =>
-        {
-            var packetHandler =
-                ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider,
-                    packetHandlerPair.Value);
-            _packetHandlersInstantiation.TryAdd(packetHandlerPair.Key, packetHandler as IPacketHandler<TSession>);
-        });
-        allIncomingPackets.ForEach(packetsType =>
-        {
-            var lambda = CodeGenerator.Lambda<Func<byte[], IIncomingPacket>>(fun =>
             {
-                var argPacketData = fun[0];
-                var newPacket = packetsType.Value.New();
+                var packetHandler =
+                    ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider,
+                        packetHandlerPair.Value
+                    );
+                _packetHandlersInstantiation.TryAdd(packetHandlerPair.Key, packetHandler as IPacketHandler<TSession>);
+            }
+        );
+        allIncomingPackets.ForEach(packetsType =>
+            {
+                var lambda = CodeGenerator.Lambda<Func<byte[], IIncomingPacket>>(fun =>
+                        {
+                            var argPacketData = fun[0];
+                            var newPacket = packetsType.Value.New();
 
-                var packetVariable = CodeGenerator.DeclareVariable(packetsType.Value, "packet");
-                CodeGenerator.Assign(packetVariable, newPacket);
-                CodeGenerator.Call(packetVariable, nameof(IIncomingPacket.Deserialize), argPacketData);
+                            var packetVariable = CodeGenerator.DeclareVariable(packetsType.Value, "packet");
+                            CodeGenerator.Assign(packetVariable, newPacket);
+                            CodeGenerator.Call(packetVariable, nameof(IIncomingPacket.Deserialize), argPacketData);
 
-                CodeGenerator.Return(packetVariable);
-            }).Compile();
-            tempDeserializationMap.TryAdd(packetsType.Key, lambda);
-        });
+                            CodeGenerator.Return(packetVariable);
+                        }
+                    )
+                    .Compile();
+                tempDeserializationMap.TryAdd(packetsType.Key, lambda);
+            }
+        );
 
         _deserializationMap = tempDeserializationMap.ToImmutableDictionary();
     }
@@ -74,11 +81,13 @@ public class PacketDistributor<TPacketIdEnum, TSession> where TPacketIdEnum : En
     {
         var packetsWithId = sourcesContainingPackets.SelectMany(a => a.GetTypes()
                 .Where(type => type is { IsInterface: false, IsAbstract: false } &&
-                               type.GetInterfaces().Contains(packetType)
-                               && type.GetCustomAttributes<PacketIdAttribute<TPacketIdEnum>>().Any()
-                ))
+                               type.GetInterfaces().Contains(packetType) &&
+                               type.GetCustomAttributes<PacketIdAttribute<TPacketIdEnum>>().Any()
+                )
+            )
             .Select(type =>
-                new { Type = type, Attribute = type.GetCustomAttribute<PacketIdAttribute<TPacketIdEnum>>() })
+                new { Type = type, Attribute = type.GetCustomAttribute<PacketIdAttribute<TPacketIdEnum>>() }
+            )
             .Select(x => new KeyValuePair<TPacketIdEnum, Type>(x.Attribute!.Code, x.Type));
 
         return packetsWithId;
@@ -89,20 +98,32 @@ public class PacketDistributor<TPacketIdEnum, TSession> where TPacketIdEnum : En
     {
         var packetHandlersWithId = sourcesContainingPacketHandlers.SelectMany(assembly => assembly.GetTypes()
                 .Where(t =>
-                    t is { IsClass: true, IsAbstract: false } && Array.Exists(t
-                        .GetInterfaces(), i =>
-                        i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPacketHandler<,>)))
+                    t is { IsClass: true, IsAbstract: false } &&
+                    Array.Exists(t
+                            .GetInterfaces(),
+                        i =>
+                            i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPacketHandler<,>)
+                    )
+                )
                 .Select(packetHandlerType => new
                 {
                     Type = packetHandlerType,
                     PacketId = packetHandlerType
-                        .GetInterfaces().First(t1 =>
-                            t1 is { IsGenericType: true } &&
-                            t1.GetGenericTypeDefinition() == typeof(IPacketHandler<,>)).GetGenericArguments()
-                        .First(genericType => genericType.GetInterfaces().Any(packetType =>
-                            packetType == typeof(IPacket)))
-                        .GetCustomAttribute<PacketIdAttribute<TPacketIdEnum>>()
-                }))
+                            .GetInterfaces()
+                            .First(t1 =>
+                                t1 is { IsGenericType: true } &&
+                                t1.GetGenericTypeDefinition() == typeof(IPacketHandler<,>)
+                            )
+                            .GetGenericArguments()
+                            .First(genericType => genericType.GetInterfaces()
+                                .Any(packetType =>
+                                    packetType == typeof(IPacket)
+                                )
+                            )
+                            .GetCustomAttribute<PacketIdAttribute<TPacketIdEnum>>()
+                }
+                )
+            )
             .Where(x => x.PacketId != null)
             .Select(x => new KeyValuePair<TPacketIdEnum, Type>(x.PacketId!.Code, x.Type));
 

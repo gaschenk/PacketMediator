@@ -1,11 +1,11 @@
-﻿name: Release Rai.PacketMediator
+name: Release Rai.PacketMediator
 run-name: ${{ gitea.actor }} is building the Server application
 on:
   push:
     tags:
-      - 'v*.*.*'
+    - v*.*.*
     paths-ignore:
-      - .run/**
+    - .run/**
 
 jobs:
   preprocess:
@@ -13,75 +13,75 @@ jobs:
     outputs:
       sanitized_branch_name: ${{ steps.sanitize.outputs.sanitized_branch_name }}
     steps:
-      - name: Sanitize branch name
-        id: sanitize
-        run: echo "::set-output name=sanitized_branch_name::$(echo ${{ github.ref_name }} | sed 's/\//-/g')"
+    - name: Sanitize branch name
+      id: sanitize
+      run: echo "::set-output name=sanitized_branch_name::$(echo ${{ github.ref_name }} | sed 's/\//-/g')"
 
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet
-        uses: https://github.com/actions/setup-dotnet@v3
-        with:
-          global-json-file: global.json
-      - name: Install dependencies
-        run: dotnet restore
-      - name: Build
-        run: |
-          cd RaiNote.PacketMediator
-          dotnet build RaiNote.PacketMediator.csproj -c Release
+    - uses: actions/checkout@v4
+    - name: Setup dotnet
+      uses: https://github.com/actions/setup-dotnet@v3
+      with:
+        global-json-file: global.json
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Build
+      run: |
+        cd RaiNote.PacketMediator
+        dotnet build RaiNote.PacketMediator.csproj -c Release
 
   publish:
-    needs: [ build ]
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet
-        uses: https://github.com/actions/setup-dotnet@v3
-        with:
-          global-json-file: global.json
-      - name: Install dependencies
-        run: dotnet restore
-      - name: Extract Version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Extracted version is $VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-        shell: bash
-      - name: Pack nuget package
-        run: |
-          cd RaiNote.PacketMediator
-          dotnet build RaiNote.PacketMediator.csproj -c Release -p:PackageVersion=${{env.VERSION}}
-          dotnet pack -c Release -p:PackageVersion=${{env.VERSION}} --output .
-      - name: Push to NuGet
-        run: |
-          cd RaiNote.PacketMediator
-          dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://forge.rainote.dev/api/packages/rainote/nuget/index.json
+    - uses: actions/checkout@v4
+    - name: Setup dotnet
+      uses: https://github.com/actions/setup-dotnet@v3
+      with:
+        global-json-file: global.json
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Extract Version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "Extracted version is $VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+      shell: bash
+    - name: Pack nuget package
+      run: |
+        cd RaiNote.PacketMediator
+        dotnet build RaiNote.PacketMediator.csproj -c Release -p:PackageVersion=${{env.VERSION}}
+        dotnet pack -c Release -p:PackageVersion=${{env.VERSION}} --output .
+    - name: Push to NuGet
+      run: |
+        cd RaiNote.PacketMediator
+        dotnet nuget push "*.nupkg" --api-key ${{secrets.nuget_api_key}} --source https://forge.rainote.dev/api/packages/rainote/nuget/index.json
 
   generate-licences:
-    needs: [ build, preprocess ]
+    needs: [build, preprocess]
     runs-on: ubuntu-latest
     container: catthehacker/ubuntu:act-latest@sha256:efe7d859ca6f98a21b3b0471ab48455af597a064d719f65332d0f105aadcad65
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet
-        uses: https://github.com/actions/setup-dotnet@v3
-        with:
-          dotnet-version: |
-            7.0
-            8.0
-      - name: Install dependencies
-        run: |
-          dotnet restore
-          echo "::add-path::$HOME/.dotnet/tools"
-      - name: Install nuget-license
-        run: dotnet tool install --global dotnet-project-licenses
-      - name: Export licenses
-        run: dotnet-project-licenses -i . -u --projects-filter projects_ignore_licenses.json -m -j -e -f licenses
-      - name: Upload licenses
-        uses: actions/upload-artifact@v3
-        with:
-          name: licenses
-          path: licenses
-          retention-days: 31
+    - uses: actions/checkout@v4
+    - name: Setup dotnet
+      uses: https://github.com/actions/setup-dotnet@v3
+      with:
+        dotnet-version: |
+          7.0
+          8.0
+    - name: Install dependencies
+      run: |
+        dotnet restore
+        echo "::add-path::$HOME/.dotnet/tools"
+    - name: Install nuget-license
+      run: dotnet tool install --global dotnet-project-licenses
+    - name: Export licenses
+      run: dotnet-project-licenses -i . -u --projects-filter projects_ignore_licenses.json -m -j -e -f licenses
+    - name: Upload licenses
+      uses: actions/upload-artifact@v3
+      with:
+        name: licenses
+        path: licenses
+        retention-days: 31
