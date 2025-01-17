@@ -2,7 +2,7 @@ using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
-namespace SourceGenerators1.Tests.Utils;
+namespace PacketMediator.Generator.Tests.Utils;
 
 public class TestAdditionalFile : AdditionalText
 {

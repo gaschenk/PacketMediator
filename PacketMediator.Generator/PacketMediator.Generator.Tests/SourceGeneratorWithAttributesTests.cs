@@ -3,9 +3,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace SourceGenerators1.Tests;
+namespace PacketMediator.Generator.Tests;
 
-public class SampleIncrementalSourceGeneratorTests
+public class SourceGeneratorWithAttributesTests
 {
     private const string VectorClassText = @"
 namespace TestNamespace;
@@ -40,13 +40,13 @@ partial class Vector3
     public void GenerateReportMethod()
     {
         // Create an instance of the source generator.
-        var generator = new SampleIncrementalSourceGenerator();
+        var generator = new PacketMediatorGenerator();
 
         // Source generators should be tested using 'GeneratorDriver'.
         var driver = CSharpGeneratorDriver.Create(generator);
 
         // We need to create a compilation with the required source code.
-        var compilation = CSharpCompilation.Create(nameof(SampleSourceGeneratorTests),
+        var compilation = CSharpCompilation.Create(nameof(SourceGeneratorWithAdditionalFilesTests),
             new[] { CSharpSyntaxTree.ParseText(VectorClassText) },
             new[]
             {

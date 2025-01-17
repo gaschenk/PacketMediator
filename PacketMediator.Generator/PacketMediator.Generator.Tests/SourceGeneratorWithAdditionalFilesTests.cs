@@ -1,34 +1,28 @@
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using SourceGenerators1.Tests.Utils;
+using Microsoft.CodeAnalysis;
+using PacketMediator.Generator.Tests.Utils;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
-namespace SourceGenerators1.Tests;
+namespace PacketMediator.Generator.Tests;
 
-public class SampleSourceGeneratorTests
+public class SourceGeneratorWithAdditionalFilesTests
 {
-    private const string DddRegistryText = @"User
-Document
-Customer";
+    private static readonly string[] _expected = ["PacketMediatorStatic.g.cs", "StructDictionary.g.cs"];
 
     [Fact]
     public void GenerateClassesBasedOnDDDRegistry()
     {
         // Create an instance of the source generator.
-        var generator = new SampleSourceGenerator();
+        var generator = new PacketMediatorGenerator();
 
         // Source generators should be tested using 'GeneratorDriver'.
-        var driver = CSharpGeneratorDriver.Create(new[] { generator },
-            new[]
-            {
-                // Add the additional file separately from the compilation.
-                new TestAdditionalFile("./DDD.UbiquitousLanguageRegistry.txt", DddRegistryText)
-            }
-        );
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
 
         // To run generators, we can use an empty compilation.
-        var compilation = CSharpCompilation.Create(nameof(SampleSourceGeneratorTests));
+        var compilation = CSharpCompilation.Create(nameof(SourceGeneratorWithAdditionalFilesTests));
 
         // Run generators. Don't forget to use the new compilation rather than the previous one.
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var newCompilation, out _);
@@ -39,6 +33,6 @@ Customer";
             .ToArray();
 
         // In this case, it is enough to check the file name.
-        Assert.Equivalent(new[] { "User.g.cs", "Document.g.cs", "Customer.g.cs" }, generatedFiles);
+        Assert.Equivalent(_expected, generatedFiles);
     }
 }

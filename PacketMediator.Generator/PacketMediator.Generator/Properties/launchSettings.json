@@ -3,7 +3,7 @@
   "profiles": {
     "DebugRoslynSourceGenerator": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "../SourceGenerators1.Sample/SourceGenerators1.Sample.csproj"
+      "targetProject": "../PacketMediator.Generator.Sample/PacketMediator.Generator.Sample.csproj"
     }
   }
 }
