@@ -1,7 +1,6 @@
 ﻿<Solution>
   <Project Path="PacketMediator.Generator\PacketMediator.Generator.Sample\PacketMediator.Generator.Sample.csproj" Type="Classic C#" />
   <Project Path="PacketMediator.Generator\PacketMediator.Generator.Tests\PacketMediator.Generator.Tests.csproj" Type="Classic C#" />
-  <Project Path="PacketMediator.Generator\PacketMediator.Generator\PacketMediator.Generator.csproj" Type="Classic C#" />
   <Project Path="PacketMediator.Samples\PacketMediator.Samples.csproj" Type="Classic C#" />
   <Project Path="PacketMediator.Tests\PacketMediator.Tests.csproj" Type="Classic C#" />
   <Project Path="RaiNote.PacketMediator\RaiNote.PacketMediator.csproj" Type="Classic C#" />

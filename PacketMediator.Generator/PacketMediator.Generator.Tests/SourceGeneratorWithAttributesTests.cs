@@ -1,6 +1,7 @@
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using RaiNote.PacketMediator;
 using Xunit;
 
 namespace PacketMediator.Generator.Tests;

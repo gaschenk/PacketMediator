@@ -1,9 +1,8 @@
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using PacketMediator.Generator.Tests.Utils;
 using Microsoft.CodeAnalysis.CSharp;
+using RaiNote.PacketMediator;
 using Xunit;
 
 namespace PacketMediator.Generator.Tests;
