@@ -63,7 +63,8 @@ public class HandlerA : IPacketHandler<StructA, RandomSession> {
 }
 
 public class TestHandler : IPacketHandler<StructB, RandomSession> {
-    public Task HandleAsync(StructB packet, RandomSession session, CancellationToken cancellationToken) {
+    public async Task HandleAsync(StructB packet, RandomSession session, CancellationToken cancellationToken) {
+        await Task.Delay(2000, cancellationToken);
         throw new NotImplementedException();
     }
 }

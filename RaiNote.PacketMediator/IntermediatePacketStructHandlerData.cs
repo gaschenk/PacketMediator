@@ -4,12 +4,12 @@ using Microsoft.CodeAnalysis;
 
 namespace RaiNote.PacketMediator;
 
-class IntermediatePacketStructHandlerData {
-    public IntermediatePacketStructHandlerData(ITypeSymbol packetStructSymbol, ITypeSymbol sessionSymbol) {
-        PacketStructSymbol = packetStructSymbol;
-        SessionSymbol = sessionSymbol;
+internal class IntermediatePacketStructHandlerData {
+    public IntermediatePacketStructHandlerData(string packetStructFullIdentifier, string sessionFullIdentifier) {
+        PacketStructFullIdentifier = packetStructFullIdentifier;
+        SessionFullIdentifier = sessionFullIdentifier;
     }
 
-    public ITypeSymbol PacketStructSymbol { get; set; }
-    public ITypeSymbol SessionSymbol { get; set; }
+    public string PacketStructFullIdentifier { get; set; }
+    public string SessionFullIdentifier { get; set; }
 }
