@@ -88,69 +88,7 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
         var structsWithAttributes = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: (node, _) => node is StructDeclarationSyntax { AttributeLists.Count: > 0 },
-                transform: (syntaxContext, cancellationToken) => {
-                    var structDeclaration = (StructDeclarationSyntax)syntaxContext.Node;
-                    var model = syntaxContext.SemanticModel;
-                    var symbol =
-                        ModelExtensions.GetDeclaredSymbol(model, structDeclaration,
-                                cancellationToken: cancellationToken) as
-                            INamedTypeSymbol;
-                    var requiredInterfaces = new[] {
-                        "IPacket", "IIncomingPacket", "IOutgoingPacket", "IBidirectionalPacket"
-                    };
-                    var implementsInterface = symbol != null && symbol.AllInterfaces
-                        .Any(i => requiredInterfaces.Contains(i.Name, StringComparer.Ordinal));
-                    if (!implementsInterface) {
-                        // TODO: https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#issue-diagnostics
-                        // or Analyzer
-                        var diagnostic = Diagnostic.Create(_rpmGen001Diagnostic, symbol?.Locations.First(),
-                            symbol?.ToDisplayString());
-                    }
-
-                    // Check for the marker attribute
-                    var attribute = symbol?.GetAttributes()
-                        .FirstOrDefault(attr => {
-                            var attrClass = attr.AttributeClass;
-                            while (attrClass != null) {
-                                if (string.Equals(attrClass.Name, "PacketIdAttribute", StringComparison.Ordinal) &&
-                                    string.Equals(attrClass.ContainingNamespace.ToDisplayString(),
-                                        "RaiNote.PacketMediator", StringComparison.Ordinal)) {
-                                    return true;
-                                }
-
-                                attrClass = attrClass.BaseType;
-                            }
-
-                            return false;
-                        });
-                    if (attribute == null) {
-                        return null;
-                    }
-
-                    var attributeConstructorArgument = attribute.ConstructorArguments[0];
-                    var enumType = attributeConstructorArgument.Type;
-                    var enumValue = attributeConstructorArgument.Value;
-
-                    var enumMember = enumType?.GetMembers()
-                        .OfType<IFieldSymbol>()
-                        .FirstOrDefault(f => f.ConstantValue?.Equals(enumValue) == true);
-
-                    var enumMaxValue = enumType?.GetMembers()
-                        .OfType<IFieldSymbol>().Max(x => x.ConstantValue);
-
-                    if (symbol == null || enumMember == null || enumMaxValue == null || enumType == null ||
-                        enumValue == null)
-                        return null;
-
-                    var intermediatePacketStructData = new IntermediatePacketStructData(symbol.Locations.First(),
-                        symbol.ToDisplayString(),
-                        enumValue.ToString(),
-                        enumType.ToDisplayString(),
-                        enumMember.ToDisplayString(),
-                        enumMaxValue.ToString(), implementsInterface);
-
-                    return intermediatePacketStructData;
-                })
+                transform: TransformPacketStructs)
             .Where(result => result != null);
 
         var packetHandlerValues = context.SyntaxProvider.CreateSyntaxProvider(
@@ -170,9 +108,11 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                     if (handlerData == null)
                         return null;
                     var structs = structDatas.Where(sData => {
+                        if (handlerData.PacketStructHandlerData == null)
+                            return false;
                         var equals =
                             sData != null && sData.PacketStructFullIdentifier.Equals(handlerData.PacketStructHandlerData
-                                ?.PacketStructFullIdentifier);
+                                .PacketStructFullIdentifier, StringComparison.Ordinal);
 
                         return equals;
                     }).FirstOrDefault();
@@ -188,7 +128,8 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
 
         // Collect and generate the dictionary
         context.RegisterSourceOutput(combinedResults, (ctx, result) => {
-            var combinedInfo = result.ToList();
+            var combinedInfo = result.Where(x => x != null).Select(IntermediateHandlerAndStructTuple (x) => x!)
+                .ToList();
 
             if (combinedInfo.Count <= 0)
                 return;
@@ -198,7 +139,8 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
             var intermediatePacketStructData = combinedInfo.First()?.StructData;
             if (intermediatePacketStructData?.EnumMaxValue == null)
                 return;
-            var highestValue = long.Parse(intermediatePacketStructData.EnumMaxValue);
+            var highestValue = long.Parse(intermediatePacketStructData.EnumMaxValue, NumberStyles.Integer,
+                new NumberFormatInfo());
             var ms = new MemoryStream();
             var sw = new StreamWriter(ms, Encoding.UTF8);
             sw.AutoFlush = true;
@@ -216,11 +158,13 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                                {
                            """);
 
-            var valueTuples = combinedInfo.Select((value, i) => (value, i));
-            foreach (var ((handlerData, packetStructData), i) in valueTuples) {
-                var tempVal = long.Parse(packetStructData.EnumValue,
-                    new NumberFormatInfo());
-                usedValues.Add(tempVal);
+            foreach (var (handlerData, packetStructData) in combinedInfo) {
+                if (packetStructData.EnumValue != null) {
+                    var tempVal = long.Parse(packetStructData.EnumValue,
+                        new NumberFormatInfo());
+                    usedValues.Add(tempVal);
+                }
+
                 sw.WriteLine($"""
                                     case {packetStructData.EnumMemberIdentifier}:
                                       var packet = new {handlerData.PacketHandlerIdentifier}();
@@ -279,6 +223,67 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
         });
     }
 
+    private IntermediatePacketStructData? TransformPacketStructs(GeneratorSyntaxContext syntaxContext,
+        CancellationToken cancellationToken) {
+        var structDeclaration = (StructDeclarationSyntax)syntaxContext.Node;
+        var model = syntaxContext.SemanticModel;
+        var symbol =
+            ModelExtensions.GetDeclaredSymbol(model, structDeclaration, cancellationToken: cancellationToken) as
+                INamedTypeSymbol;
+        var requiredInterfaces = new[] { "IPacket", "IIncomingPacket", "IOutgoingPacket", "IBidirectionalPacket" };
+        var implementsInterface = symbol != null &&
+                                  symbol.AllInterfaces.Any(i =>
+                                      requiredInterfaces.Contains(i.Name, StringComparer.Ordinal));
+        if (!implementsInterface) {
+            // TODO: https://github.com/dotnet/roslyn/blob/main/docs/features/incremental-generators.cookbook.md#issue-diagnostics
+            // or Analyzer
+            /*var diagnostic = Diagnostic.Create(_rpmGen001Diagnostic, symbol?.Locations.First(),
+                            symbol?.ToDisplayString());*/
+        }
+
+        // Check for the marker attribute
+        var attribute = symbol?.GetAttributes()
+            .FirstOrDefault(attr => {
+                var attrClass = attr.AttributeClass;
+                while (attrClass != null) {
+                    if (string.Equals(attrClass.Name, "PacketIdAttribute", StringComparison.Ordinal) &&
+                        attrClass.ContainingNamespace != null &&
+                        string.Equals(attrClass.ContainingNamespace.ToDisplayString(), "RaiNote.PacketMediator",
+                            StringComparison.Ordinal)) {
+                        return true;
+                    }
+
+                    attrClass = attrClass.BaseType;
+                }
+
+                return false;
+            });
+        if (attribute == null) {
+            return null;
+        }
+
+        var attributeConstructorArgument = attribute.ConstructorArguments[0];
+        var enumType = attributeConstructorArgument.Type;
+        var enumValue = attributeConstructorArgument.Value;
+
+        var enumMember = enumType?.GetMembers()
+            .OfType<IFieldSymbol>()
+            .FirstOrDefault(f => f.ConstantValue?.Equals(enumValue) == true);
+
+        var enumMaxValue = enumType?.GetMembers()
+            .OfType<IFieldSymbol>()
+            .Max(x => x.ConstantValue);
+
+        if (symbol == null || enumMember == null || enumMaxValue == null || enumType == null ||
+            enumValue == null) return null;
+
+        var intermediatePacketStructData = new IntermediatePacketStructData(symbol.Locations.First(),
+            symbol.ToDisplayString(), enumValue.ToString(), enumType.ToDisplayString(), enumMember.ToDisplayString(),
+            enumMaxValue.ToString(), implementsInterface);
+
+        return intermediatePacketStructData;
+    }
+
     private static IntermediatePacketHandlerData? TransformPacketHandlers(GeneratorSyntaxContext syntaxContext,
         CancellationToken cancellationToken) {
         var classDeclaration = (ClassDeclarationSyntax)syntaxContext.Node;
@@ -286,8 +291,8 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
         var symbol =
             ModelExtensions.GetDeclaredSymbol(model, classDeclaration, cancellationToken: cancellationToken) as
                 INamedTypeSymbol;
-        var packetStruct = (symbol.Interfaces.Select(interfaceSyntax => {
-            if (!interfaceSyntax.Name.Equals("IPacketHandler")) {
+        var packetStruct = (symbol?.Interfaces.Select(interfaceSyntax => {
+            if (!interfaceSyntax.Name.Equals("IPacketHandler", StringComparison.Ordinal)) {
                 return null;
             }
 
@@ -313,10 +318,10 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                 Expression: MemberAccessExpressionSyntax { Name: { } nameSyntax }
             } invocation &&
             context.SemanticModel.GetOperation(context.Node,
-                cancellationToken) is IInvocationOperation targetOperation &&
-            targetOperation.TargetMethod is
-                { Name: "AddPacketHandlerServices", ContainingNamespace: { Name: "RaiNote.PacketMediator" } }
-           ) {
+                cancellationToken) is IInvocationOperation {
+                TargetMethod:
+                { Name: "AddPacketHandlerServices", ContainingNamespace.Name: "RaiNote.PacketMediator" }
+            }) {
 #pragma warning disable RSEXPERIMENTAL002 // / Experimental interceptable location API
             if (context.SemanticModel.GetInterceptableLocation(invocation, cancellationToken: cancellationToken) is
                 { } location) {
@@ -338,6 +343,6 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
     }
 
 #pragma warning disable RSEXPERIMENTAL002 // / Experimental interceptable location API
-    public record CandidateInvocation(InterceptableLocation Location);
+    private record CandidateInvocation(InterceptableLocation Location);
 #pragma warning restore RSEXPERIMENTAL002
 }
