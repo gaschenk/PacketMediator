@@ -48,12 +48,11 @@ partial class Vector3
 
         // We need to create a compilation with the required source code.
         var compilation = CSharpCompilation.Create(nameof(SourceGeneratorWithAdditionalFilesTests),
-            new[] { CSharpSyntaxTree.ParseText(VectorClassText) },
-            new[]
-            {
+            [CSharpSyntaxTree.ParseText(VectorClassText)],
+            [
                 // To support 'System.Attribute' inheritance, add reference to 'System.Private.CoreLib'.
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
-            }
+            ]
         );
 
         // Run generators and retrieve all results.

@@ -1,12 +1,11 @@
-﻿// Licensed to Timothy Schenk under the Apache 2.0 License.
+// Licensed to Timothy Schenk under the Apache 2.0 License.
 
 using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
 
 namespace RaiNote.PacketMediator;
@@ -14,13 +13,12 @@ namespace RaiNote.PacketMediator;
 [Generator]
 public class PacketMediatorGenerator : IIncrementalGenerator {
     private readonly DiagnosticDescriptor _rpmGen001Diagnostic = new(
-        id: "RPMGen001",
-        title: "Struct does not implement required interface",
-        messageFormat:
+        "RPMGen001",
+        "Struct does not implement required interface",
         "The struct '{0}' must implement at least one of:  'IPacket', 'IIncomingPacket', 'IOutgoingPacket', 'IBidirectionalPacket'",
-        category: "SourceGenerator",
+        "SourceGenerator",
         DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+        true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context) {
         context.RegisterPostInitializationOutput(ctx => {
@@ -87,77 +85,94 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
         // Find all struct declarations
         var structsWithAttributes = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: (node, _) => node is StructDeclarationSyntax { AttributeLists.Count: > 0 },
-                transform: TransformPacketStructs)
+                (node, _) => node is StructDeclarationSyntax { AttributeLists.Count: > 0 },
+                TransformPacketStructs)
             .Where(result => result != null);
 
         var packetHandlerValues = context.SyntaxProvider.CreateSyntaxProvider(
-            predicate: (node, _) => node is ClassDeclarationSyntax,
-            TransformPacketHandlers).Where(result => result != null);
+                (node, _) => node is ClassDeclarationSyntax,
+                TransformPacketHandlers)
+            .Where(result => result != null);
 
-        var location =
-            context.SyntaxProvider.CreateSyntaxProvider(predicate: static (node, _) => InterceptorPredicate(node),
-                    transform: static (context, ct) => InterceptorTransform(context, ct))
-                .Where(candidate => candidate is not null);
-
-        var combinedResults = structsWithAttributes.Collect().Combine(packetHandlerValues.Collect()).Select(
-            static (tuple, cancellationToken) => {
-                var (structDatas, handlerDatas) = tuple;
-
-                var matchingData = handlerDatas.Select(handlerData => {
-                    if (handlerData == null)
-                        return null;
-                    var structs = structDatas.Where(sData => {
-                        if (handlerData.PacketStructHandlerData == null)
-                            return false;
-                        var equals =
-                            sData != null && sData.PacketStructFullIdentifier.Equals(handlerData.PacketStructHandlerData
-                                .PacketStructFullIdentifier, StringComparison.Ordinal);
-
-                        return equals;
-                    }).FirstOrDefault();
-                    if (structs == null)
-                        return null;
-                    var intermediateHandlerAndStructTuple = new IntermediateHandlerAndStructTuple(handlerData, structs);
-                    return intermediateHandlerAndStructTuple;
-                });
-
-                var intermediateHandlerAndStructTuples = matchingData.Where(x => x != null);
-                return intermediateHandlerAndStructTuples;
-            });
+        var combinedResults = structsWithAttributes.Collect()
+            .Combine(packetHandlerValues.Collect())
+            .Select(ToIntermediateTuple);
 
         // Collect and generate the dictionary
         context.RegisterSourceOutput(combinedResults, (ctx, result) => {
-            var combinedInfo = result.Where(x => x != null).Select(IntermediateHandlerAndStructTuple (x) => x!)
+            var combinedInfo = result.Where(x => x != null)
+                .Select(IntermediateHandlerAndStructTuple (x) => x!)
                 .ToList();
 
-            if (combinedInfo.Count <= 0)
+            if (combinedInfo.Count <= 0) {
                 return;
+            }
 
-            var packetHandlerData = combinedInfo.First()?.HandlerData;
+            var packetHandlerData = combinedInfo.First()
+                ?.HandlerData;
             var usedValues = new List<long>();
-            var intermediatePacketStructData = combinedInfo.First()?.StructData;
-            if (intermediatePacketStructData?.EnumMaxValue == null)
+            var intermediatePacketStructData = combinedInfo[0]?.StructData;
+            if (intermediatePacketStructData?.EnumMaxValue == null) {
                 return;
+            }
+
             var highestValue = long.Parse(intermediatePacketStructData.EnumMaxValue, NumberStyles.Integer,
                 new NumberFormatInfo());
             var ms = new MemoryStream();
             var sw = new StreamWriter(ms, Encoding.UTF8);
             sw.AutoFlush = true;
 
-            var enumTypeString = intermediatePacketStructData?.EnumTypeFullIdentifier;
+            var enumTypeString = intermediatePacketStructData.EnumTypeFullIdentifier;
             var sessionTypeString = packetHandlerData?.PacketStructHandlerData?.SessionFullIdentifier;
             sw.WriteLine($$"""
                            using System;
                            using System.Threading;
                            using System.Threading.Tasks;
+                           using Microsoft.Extensions.DependencyInjection;
+                           using System.Runtime.CompilerServices;
+
                            public static class PacketHandlerMediator
                            {
                                public async static Task Handle(IServiceProvider serviceProvider, byte[] data,{{enumTypeString}} opcode ,{{packetHandlerData?.PacketStructHandlerData?.SessionFullIdentifier}} session, CancellationToken cancellationToken){
+
                                switch(opcode)
                                {
                            """);
 
+            foreach (var (_, packetStructData) in combinedInfo) {
+                if (packetStructData.EnumValue != null) {
+                    var tempVal = long.Parse(packetStructData.EnumValue,
+                        new NumberFormatInfo());
+                    usedValues.Add(tempVal);
+                }
+
+                // Fixed number of operations per case (2) => see StubHandler
+                sw.WriteLine($"""
+                                    case {packetStructData.EnumMemberIdentifier}:
+                                        KnownHandlerMethodDump.Handle{packetStructData.EnumValue}(serviceProvider, data, opcode, session, cancellationToken);
+                                        return;
+                              """);
+            }
+
+            // Forced jump-table on asm/il generation
+            for (long i = 0; i <= highestValue; i++) {
+                if (!usedValues.Contains(i)) {
+                    sw.WriteLine($"""
+                                        case (({enumTypeString}){i}):
+                                            await StubHandler.HandleAsync(data, opcode, session, cancellationToken);
+                                            return;
+                                  """);
+                }
+            }
+
+            sw.WriteLine("""
+                               }
+                             }
+                         }
+                         static class KnownHandlerMethodDump {
+                         """);
+
+            // Generate methods to have uniform number of operations per case
             foreach (var (handlerData, packetStructData) in combinedInfo) {
                 if (packetStructData.EnumValue != null) {
                     var tempVal = long.Parse(packetStructData.EnumValue,
@@ -165,32 +180,24 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                     usedValues.Add(tempVal);
                 }
 
-                sw.WriteLine($"""
-                                    case {packetStructData.EnumMemberIdentifier}:
-                                      var packet = new {handlerData.PacketHandlerIdentifier}();
-                                      packet.Deserialize(data);
-                                      _ = {handlerData.PacketHandlerIdentifier}.HandleAsync(packet, session, cancellationToken);
-                                      return;
-                              """);
+                sw.WriteLine($$"""
+                                   [MethodImpl(MethodImplOptions.NoInlining)]
+                                   internal static async Task Handle{{packetStructData.EnumValue}}(IServiceProvider serviceProvider, byte[] data,{{enumTypeString}} opcode ,{{packetHandlerData?.PacketStructHandlerData?.SessionFullIdentifier}} session, CancellationToken cancellationToken)
+                                   {
+                                     var packet{{packetStructData.EnumValue}} = new {{packetStructData.PacketStructFullIdentifier}}();
+                                     var handler{{packetStructData.EnumValue}} = ActivatorUtilities.GetServiceOrCreateInstance<{{handlerData.PacketHandlerIdentifier}}>(serviceProvider);
+                                     packet{{packetStructData.EnumValue}}.Deserialize(data);
+                                     await handler{{packetStructData.EnumValue}}.HandleAsync(packet{{packetStructData.EnumValue}}, session, cancellationToken);
+                                   }
+                               """);
             }
 
-            // Forced jumptable on asm generation
-            for (long i = 0; i <= highestValue; i++) {
-                if (!usedValues.Contains(i)) {
-                    sw.WriteLine($"""
-                                        case (({enumTypeString}){i}):
-                                          _ =  StubHandler.HandleAsync(data, opcode, session, cancellationToken);
-                                          return;
-                                  """);
-                }
-            }
+            sw.WriteLine("}");
 
             // TODO: allow overriding
             sw.WriteLine($$"""
-                                 }
-                               }
-                           }
                            public static class StubHandler {
+                           [MethodImpl(MethodImplOptions.NoInlining)]
                                public static async Task HandleAsync(byte[] data,{{enumTypeString}} opcode, {{sessionTypeString}} session, CancellationToken cancellationToken) {
                                // Stub method
                                }
@@ -223,12 +230,39 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
         });
     }
 
+    private static IEnumerable<IntermediateHandlerAndStructTuple?> ToIntermediateTuple(
+        (ImmutableArray<IntermediatePacketStructData?> Left, ImmutableArray<IntermediatePacketHandlerData?> Right)
+            tuple, CancellationToken _) {
+        var (structDatas, handlerDatas) = tuple;
+
+        var matchingData = handlerDatas.Select(handlerData => {
+            if (handlerData?.PacketStructHandlerData == null) {
+                return null;
+            }
+
+            var structData = structDatas
+                .FirstOrDefault(sData =>
+                    sData != null && sData.PacketStructFullIdentifier.Equals(
+                        handlerData.PacketStructHandlerData.PacketStructFullIdentifier, StringComparison.Ordinal));
+
+            if (structData == null) {
+                return null;
+            }
+
+            var intermediateHandlerAndStructTuple = new IntermediateHandlerAndStructTuple(handlerData, structData);
+            return intermediateHandlerAndStructTuple;
+        });
+
+        var intermediateHandlerAndStructTuples = matchingData.Where(x => x != null);
+        return intermediateHandlerAndStructTuples;
+    }
+
     private IntermediatePacketStructData? TransformPacketStructs(GeneratorSyntaxContext syntaxContext,
         CancellationToken cancellationToken) {
         var structDeclaration = (StructDeclarationSyntax)syntaxContext.Node;
         var model = syntaxContext.SemanticModel;
         var symbol =
-            ModelExtensions.GetDeclaredSymbol(model, structDeclaration, cancellationToken: cancellationToken) as
+            ModelExtensions.GetDeclaredSymbol(model, structDeclaration, cancellationToken) as
                 INamedTypeSymbol;
         var requiredInterfaces = new[] { "IPacket", "IIncomingPacket", "IOutgoingPacket", "IBidirectionalPacket" };
         var implementsInterface = symbol != null &&
@@ -275,7 +309,9 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
             .Max(x => x.ConstantValue);
 
         if (symbol == null || enumMember == null || enumMaxValue == null || enumType == null ||
-            enumValue == null) return null;
+            enumValue == null) {
+            return null;
+        }
 
         var intermediatePacketStructData = new IntermediatePacketStructData(symbol.Locations.First(),
             symbol.ToDisplayString(), enumValue.ToString(), enumType.ToDisplayString(), enumMember.ToDisplayString(),
@@ -289,14 +325,16 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
         var classDeclaration = (ClassDeclarationSyntax)syntaxContext.Node;
         var model = syntaxContext.SemanticModel;
         var symbol =
-            ModelExtensions.GetDeclaredSymbol(model, classDeclaration, cancellationToken: cancellationToken) as
+            ModelExtensions.GetDeclaredSymbol(model, classDeclaration, cancellationToken) as
                 INamedTypeSymbol;
         var packetStruct = (symbol?.Interfaces.Select(interfaceSyntax => {
             if (!interfaceSyntax.Name.Equals("IPacketHandler", StringComparison.Ordinal)) {
                 return null;
             }
 
-            if (interfaceSyntax.TypeArguments.Length != 2) return null;
+            if (interfaceSyntax.TypeArguments.Length != 2) {
+                return null;
+            }
 
             var genericStructArgument = interfaceSyntax.TypeArguments[0];
             var genericSessionArgument = interfaceSyntax.TypeArguments[1];
@@ -305,44 +343,12 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                 genericSessionArgument.ToDisplayString());
         }) ?? throw new InvalidOperationException("1")).FirstOrDefault(x => x != null);
 
-        if (packetStruct == null) return null;
+        if (packetStruct == null) {
+            return null;
+        }
+
         var intermediatePacketHandlerData = new IntermediatePacketHandlerData(symbol.ToDisplayString(), packetStruct);
 
         return intermediatePacketHandlerData;
     }
-
-    // https://andrewlock.net/creating-a-source-generator-part-11-implementing-an-interceptor-with-a-source-generator/
-    private static CandidateInvocation? InterceptorTransform(GeneratorSyntaxContext context,
-        CancellationToken cancellationToken) {
-        if (context.Node is InvocationExpressionSyntax {
-                Expression: MemberAccessExpressionSyntax { Name: { } nameSyntax }
-            } invocation &&
-            context.SemanticModel.GetOperation(context.Node,
-                cancellationToken) is IInvocationOperation {
-                TargetMethod:
-                { Name: "AddPacketHandlerServices", ContainingNamespace.Name: "RaiNote.PacketMediator" }
-            }) {
-#pragma warning disable RSEXPERIMENTAL002 // / Experimental interceptable location API
-            if (context.SemanticModel.GetInterceptableLocation(invocation, cancellationToken: cancellationToken) is
-                { } location) {
-                // Return the location details and the full type details
-                return new CandidateInvocation(location);
-            }
-#pragma warning restore RSEXPERIMENTAL002
-        }
-
-        return null;
-    }
-
-    private static bool InterceptorPredicate(SyntaxNode node) {
-        return node is InvocationExpressionSyntax {
-            Expression: MemberAccessExpressionSyntax {
-                Name.Identifier.ValueText: "AddPacketHandlerServices"
-            }
-        };
-    }
-
-#pragma warning disable RSEXPERIMENTAL002 // / Experimental interceptable location API
-    private record CandidateInvocation(InterceptableLocation Location);
-#pragma warning restore RSEXPERIMENTAL002
 }

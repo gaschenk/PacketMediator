@@ -1,3 +1,5 @@
+// Licensed to Timothy Schenk under the Apache 2.0 License.
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +16,7 @@ public enum OperationCode {
     F,
     G,
     H = 100,
-    I = 5000,
+    I = 5000
 }
 
 [GamePacketId(OperationCode.A)]
@@ -44,7 +46,6 @@ public struct StructD : IIncomingPacket {
         throw new NotImplementedException();
     }
 }
-
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
 public class GamePacketIdAttribute : PacketIdAttribute<OperationCode> {
