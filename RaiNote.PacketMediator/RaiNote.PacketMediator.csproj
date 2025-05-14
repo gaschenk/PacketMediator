@@ -5,9 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageVersion>$(PackageVersion)</PackageVersion>
-    <PackageProjectUrl>https://forge.rainote.dev/rainote/PacketMediator</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/gaschenk/PacketMediator</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryUrl>https://forge.rainote.dev/rainote/PacketMediator</RepositoryUrl>
+    <RepositoryUrl>https://github.com/gaschenk/PacketMediator</RepositoryUrl>
     <RepositoryType>GIT</RepositoryType>
     <Version>$(PackageVersion)</Version>
     <Authors>Timothy (RaiNote) Schenk</Authors>
