@@ -34,21 +34,31 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                                 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
                                 public abstract class PacketIdAttribute<TPacketIdEnum> : Attribute where TPacketIdEnum : Enum
                                 {
-                                    protected PacketIdAttribute(TPacketIdEnum code)
+                                    protected PacketIdAttribute(TPacketIdEnum code, int maximumPacketLength)
                                     {
                                         Code = code;
+                                        MaximumPacketLength = maximumPacketLength;
                                     }
 
                                     public TPacketIdEnum Code { get; }
+                                    public int MaximumPacketLength { get; }
                                 }
-                                public interface IPacket;
+                                public enum PacketSerializationCodes{
+                                    Valid,
+                                    Invalid,
+                                    InvalidSize
+                                }
+                                public interface IPacket
+                                {
+                                    public int GetCurrentMaxSize();
+                                }
                                 public interface IIncomingPacket : IPacket
                                 {
-                                    public void Deserialize(byte[] data);
+                                    public PacketSerializationCodes Deserialize(Span<byte> data);
                                 }
                                 public interface IOutgoingPacket : IPacket
                                 {
-                                    public byte[] Serialize();
+                                    public PacketSerializationCodes Serialize(Span<byte> data);
                                 }
 
                                 public interface IBidirectionalPacket : IOutgoingPacket, IIncomingPacket;
@@ -133,7 +143,7 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
 
                            public static class PacketHandlerMediator
                            {
-                               public async static Task Handle(IServiceProvider serviceProvider, byte[] data,{{enumTypeString}} opcode ,{{packetHandlerData?.PacketStructHandlerData?.SessionFullIdentifier}} session, CancellationToken cancellationToken){
+                               public async static Task Handle(IServiceProvider serviceProvider, byte[] data, {{enumTypeString}} opcode ,{{packetHandlerData?.PacketStructHandlerData?.SessionFullIdentifier}} session, CancellationToken cancellationToken){
 
                                switch(opcode)
                                {
@@ -149,7 +159,7 @@ public class PacketMediatorGenerator : IIncrementalGenerator {
                 // Fixed number of operations per case (2) => see StubHandler
                 sw.WriteLine($"""
                                     case {packetStructData.EnumMemberIdentifier}:
-                                        KnownHandlerMethodDump.Handle{packetStructData.EnumValue}(serviceProvider, data, opcode, session, cancellationToken);
+                                        await KnownHandlerMethodDump.Handle{packetStructData.EnumValue}(serviceProvider, data, opcode, session, cancellationToken);
                                         return;
                               """);
             }

@@ -16,40 +16,57 @@ public enum OperationCode {
     F,
     G,
     H = 100,
-    I = 5000
+    I = 200
 }
 
-[GamePacketId(OperationCode.A)]
+[GamePacketId(OperationCode.A, 100)]
 public struct StructA : IIncomingPacket {
-    public void Deserialize(byte[] data) {
+    public PacketSerializationCodes Deserialize(Span<byte> data) {
+        throw new NotImplementedException();
+    }
+
+    public int GetCurrentMaxSize() {
         throw new NotImplementedException();
     }
 }
 
-[GamePacketId(OperationCode.B)]
+[GamePacketId(OperationCode.B, 100)]
 public struct StructB : IPacket, IIncomingPacket {
-    public void Deserialize(byte[] data) {
+
+    public PacketSerializationCodes Deserialize(Span<byte> data) {
+        throw new NotImplementedException();
+    }
+
+    public int GetCurrentMaxSize() {
         throw new NotImplementedException();
     }
 }
 
-[GamePacketId(OperationCode.E)]
+[GamePacketId(OperationCode.E, 100)]
 public struct StructC : IIncomingPacket {
-    public void Deserialize(byte[] data) {
+    public PacketSerializationCodes Deserialize(Span<byte> data) {
+        throw new NotImplementedException();
+    }
+
+    public int GetCurrentMaxSize() {
         throw new NotImplementedException();
     }
 }
 
-[GamePacketId(OperationCode.H)]
+[GamePacketId(OperationCode.H, 100)]
 public struct StructD : IIncomingPacket {
-    public void Deserialize(byte[] data) {
+    public PacketSerializationCodes Deserialize(Span<byte> data) {
+        throw new NotImplementedException();
+    }
+
+    public int GetCurrentMaxSize() {
         throw new NotImplementedException();
     }
 }
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
 public class GamePacketIdAttribute : PacketIdAttribute<OperationCode> {
-    public GamePacketIdAttribute(OperationCode code) : base(code) {
+    public GamePacketIdAttribute(OperationCode code, int size) : base(code, size) {
     }
 }
 
